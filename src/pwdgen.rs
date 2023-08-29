@@ -18,6 +18,11 @@ pub fn gen_pwd_from_pools<R>(rng: &mut R, min_length: usize, pools: &[Pool]) -> 
 where
     R: rand::Rng + ?Sized,
 {
+    // If pools is empty, return an empty string.
+    if pools.is_empty() {
+        return String::new();
+    }
+
     // Get the maximum length of the password.
     let min_sum = pools.iter().map(|p| p.minimum).sum::<usize>();
     let length = std::cmp::max(min_length, min_sum);
