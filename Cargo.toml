@@ -10,3 +10,5 @@ rand = "0.8.4"
 clap = { version = "4.3.21", features = ["derive"] }
 constcat = "0.3.0"
 itertools = "0.11.0"
+cli-clipboard = "0.4.0"
+colored = "2.0.4"

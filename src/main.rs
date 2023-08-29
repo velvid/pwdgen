@@ -1,6 +1,8 @@
 mod pwdgen;
 
 use clap::Parser;
+use cli_clipboard;
+use colored::*;
 
 #[derive(Parser)]
 struct PwdArgs {
@@ -13,53 +15,85 @@ struct PwdArgs {
     length: usize,
 
     #[arg(
-        short = 'a',
+        long = "upper",
+        default_value = "0",
+        help = "Minimum uppercase characters."
+    )]
+    min_upper: usize,
+
+    #[arg(
+        long = "lower",
+        default_value = "0",
+        help = "Minimum lowercase characters."
+    )]
+    min_lower: usize,
+
+    #[arg(
         long = "alpha",
-        default_value = "1",
-        help = "Minimum alphabet characters."
+        default_value = "0",
+        help = "Minimum alphabet characters. Will override either upper and loweer."
     )]
     min_alpha: usize,
 
     #[arg(
-        short = 'n',
         long = "numeric",
-        default_value = "1",
+        default_value = "0",
         help = "Minimum numeric characters."
     )]
     min_numeric: usize,
 
     #[arg(
-        short = 's',
         long = "special",
-        default_value = "1",
+        default_value = "0",
         help = "Minimum special characters."
     )]
     min_special: usize,
+
+    #[arg(
+        long = "show",
+        default_value = "false",
+        help = "Prints the password after generating."
+    )]
+    show: bool,
 
     #[arg(short = 'v', long = "verbose", help = "Prints verbose output.")]
     verbose: bool,
 }
 
+fn push_to_pool(
+    pools: &mut Vec<pwdgen::Pool>,
+    name: &'static str,
+    minimum: usize,
+    chars: &'static str,
+) {
+    if minimum > 0 {
+        pools.push(pwdgen::Pool {
+            name,
+            minimum,
+            chars,
+        });
+    }
+}
+
 fn main() {
     let args = PwdArgs::parse();
 
-    let pools = [
-        pwdgen::Pool {
-            name: "alpha",
-            minimum: args.min_alpha,
-            chars: pwdgen::ALPHA,
-        },
-        pwdgen::Pool {
-            name: "numeric",
-            minimum: args.min_numeric,
-            chars: pwdgen::NUMERIC,
-        },
-        pwdgen::Pool {
-            name: "special",
-            minimum: args.min_special,
-            chars: pwdgen::SPECIAL,
-        },
-    ];
+    let mut pools: Vec<pwdgen::Pool> = Vec::new();
+
+    if args.min_alpha > 0 {
+        push_to_pool(&mut pools, "alpha", args.min_alpha, pwdgen::ALPHA);
+    } else {
+        push_to_pool(&mut pools, "upper", args.min_upper, pwdgen::UPPER);
+        push_to_pool(&mut pools, "lower", args.min_lower, pwdgen::LOWER);
+    }
+    push_to_pool(&mut pools, "numeric", args.min_numeric, pwdgen::NUMERIC);
+    push_to_pool(&mut pools, "special", args.min_special, pwdgen::SPECIAL);
+
+    if pools.is_empty() {
+        println!("No character pools specified. Defaulting to alphanumeric characters.");
+        push_to_pool(&mut pools, "alpha", 1, pwdgen::ALPHA);
+        push_to_pool(&mut pools, "numeric", 1, pwdgen::NUMERIC);
+    }
 
     let start = std::time::Instant::now();
 
@@ -67,7 +101,12 @@ fn main() {
 
     let elapsed = start.elapsed();
 
-    println!("{}", pwd);
+    cli_clipboard::set_contents(pwd.to_owned()).unwrap();
+    println!("{}", "Copied to clipboard!");
+
+    if args.show {
+        println!("Password: {}", pwd.clone().cyan());
+    }
 
     if args.verbose {
         // Elapsed time to generate password.
