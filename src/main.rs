@@ -89,7 +89,7 @@ fn main() {
     }
 
     let start = std::time::Instant::now();
-    let pwd = pwdgen::from_pools(&mut rand::thread_rng(), args.length, &pool).unwrap();
+    let pwd = pwdgen::from_pool(&mut rand::thread_rng(), args.length, &pool).unwrap();
     let elapsed = start.elapsed();
 
     if args.copy {

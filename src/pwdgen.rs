@@ -17,12 +17,16 @@ pub mod chars {
 }
 
 #[allow(dead_code)]
-pub fn from_pools<R>(rng: &mut R, min_length: usize, pools: &[chars::Set]) -> Result<String, &'static str>
+pub fn from_pool<R>(
+    rng: &mut R,
+    min_length: usize,
+    pools: &[chars::Set],
+) -> Result<String, &'static str>
 where
     R: rand::Rng + ?Sized,
 {
     if pools.is_empty() {
-        return Err("No character pools specified.");
+        return Err("No character sets specified.");
     }
 
     for pool in pools {
@@ -61,45 +65,50 @@ where
 pub fn from_params<R>(
     rng: &mut R,
     min_length: usize,
-    alpha_min: Option<usize>,
-    numeric_min: Option<usize>,
-    special_min: Option<usize>,
+    min_alpha: Option<usize>,
+    min_numeric: Option<usize>,
+    min_special: Option<usize>,
 ) -> Result<String, &'static str>
 where
     R: rand::Rng + ?Sized,
 {
     use chars::*;
 
-    let sum_of_min = alpha_min.unwrap_or(0) + numeric_min.unwrap_or(0) + special_min.unwrap_or(0);
+    let sum_of_min = min_alpha.unwrap_or(0) + min_numeric.unwrap_or(0) + min_special.unwrap_or(0);
+
+    if sum_of_min == 0 {
+        return Err("No character sets specified.");
+    }
+
     let length = std::cmp::max(min_length, sum_of_min);
     let mut pwd: Vec<char> = Vec::with_capacity(length);
 
-    for _ in 0..alpha_min.unwrap_or(0) {
+    for _ in 0..min_alpha.unwrap_or(0) {
         let c = ALPHA.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
-    for _ in 0..numeric_min.unwrap_or(0) {
+    for _ in 0..min_numeric.unwrap_or(0) {
         let c = NUMERIC.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
-    for _ in 0..special_min.unwrap_or(0) {
+    for _ in 0..min_special.unwrap_or(0) {
         let c = SPECIAL.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
     let mut merged_chars = String::with_capacity(chars::ALL.len());
 
-    if alpha_min.is_none() {
+    if min_alpha.is_some() {
         merged_chars.push_str(ALPHA);
     }
 
-    if numeric_min.is_none() {
+    if min_numeric.is_some() {
         merged_chars.push_str(NUMERIC);
     }
 
-    if special_min.is_none() {
+    if min_special.is_some() {
         merged_chars.push_str(SPECIAL);
     }
 
