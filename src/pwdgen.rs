@@ -58,32 +58,111 @@ mod tests {
     use super::*;
 
     #[test]
-    fn general() {
-        let mut rng = rand::thread_rng();
+    fn no_pools() {
+        let pools = [];
+        let pwd = from_pools(&mut rand::thread_rng(), 1000, &pools);
+        assert_eq!(pwd.len(), 0);
+    }
 
+    #[test]
+    fn single_pool() {
+        let pools = [Pool {
+            name: Some("special"),
+            minimum: 3,
+            char_set: SPECIAL,
+        }];
+
+        let pwd = from_pools(&mut rand::thread_rng(), 0, &pools);
+        assert_eq!(pwd.len(), 3);
+        assert!(pwd.chars().all(|c| SPECIAL.contains(c)));
+    }
+
+    #[test]
+    fn minimums_of_zero() {
         let pools = [
             Pool {
-                name: "alpha",
-                minimum: 2,
-                chars: ALPHA,
+                name: Some("alpha"),
+                minimum: 1,
+                char_set: ALPHA,
             },
             Pool {
-                name: "numeric",
-                minimum: 2,
-                chars: NUMERIC,
-            },
-            Pool {
-                name: "special",
-                minimum: 2,
-                chars: SPECIAL,
+                name: Some("numeric"),
+                minimum: 0,
+                char_set: NUMERIC,
             },
         ];
 
-        let pwd = gen_pwd_from_pools(&mut rng, 8, &pools);
+        let pwd = from_pools(&mut rand::thread_rng(), 10, &pools);
+        assert_eq!(pwd.len(), 10);
+        assert!(pwd.chars().any(|c| ALPHA.contains(c)));
+    }
 
-        assert_eq!(pwd.len(), 8);
-        for pool in &pools {
-            assert!(pwd.chars().filter(|c| pool.chars.contains(*c)).count() >= pool.minimum);
+    #[test]
+    fn length_of_two() {
+        let pools = [
+            Pool {
+                name: Some("alpha"),
+                minimum: 1,
+                char_set: ALPHA,
+            },
+            Pool {
+                name: Some("numeric"),
+                minimum: 1,
+                char_set: NUMERIC,
+            },
+        ];
+
+        let pwd = from_pools(&mut rand::thread_rng(), 2, &pools);
+        assert_eq!(pwd.len(), 2);
+        assert!(pwd.chars().any(|c| ALPHA.contains(c)));
+        assert!(pwd.chars().any(|c| NUMERIC.contains(c)));
+    }
+
+    #[test]
+    fn minimums_exceed_length() {
+        let pools = [
+            Pool {
+                name: Some("alpha"),
+                minimum: 2,
+                char_set: ALPHA,
+            },
+            Pool {
+                name: Some("numeric"),
+                minimum: 2,
+                char_set: NUMERIC,
+            },
+        ];
+
+        let pwd = from_pools(&mut rand::thread_rng(), 0, &pools);
+        assert_eq!(pwd.len(), 4);
+        assert!(pwd.chars().filter(|c| ALPHA.contains(*c)).count() == 2);
+        assert!(pwd.chars().filter(|c| NUMERIC.contains(*c)).count() == 2);
+    }
+
+    #[test]
+    fn general() {
+        let pools = [
+            Pool {
+                name: Some("alpha"),
+                minimum: 3,
+                char_set: ALPHA,
+            },
+            Pool {
+                name: Some("numeric"),
+                minimum: 3,
+                char_set: NUMERIC,
+            },
+            Pool {
+                name: Some("special"),
+                minimum: 3,
+                char_set: SPECIAL,
+            },
+        ];
+
+        let pwd = from_pools(&mut rand::thread_rng(), 15, &pools);
+        assert_eq!(pwd.len(), 15);
+        for pool in pools {
+            assert!(pwd.chars().filter(|c| pool.char_set.contains(*c)).count() >= pool.minimum);
         }
     }
 }
