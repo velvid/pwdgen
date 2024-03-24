@@ -1,4 +1,5 @@
 mod pwdgen;
+use pwdgen::chars::*;
 
 use clap::Parser;
 use cli_clipboard;
@@ -15,42 +16,25 @@ struct PwdArgs {
     length: usize,
 
     #[arg(
-        long = "upper",
-        default_value = "0",
-        help = "Minimum uppercase characters."
-    )]
-    min_upper: usize,
-
-    #[arg(
-        long = "lower",
-        default_value = "0",
-        help = "Minimum lowercase characters."
-    )]
-    min_lower: usize,
-
-    #[arg(
         short = 'a',
         long = "alpha",
-        default_value = "0",
-        help = "Minimum alphabet characters. Will override either upper or lower."
+        help = "Minimum alphabet characters. If flag is not set, won't be added to character pool."
     )]
-    min_alpha: usize,
+    min_alpha: Option<Option<usize>>,
 
     #[arg(
         short = 'n',
         long = "numeric",
-        default_value = "0",
-        help = "Minimum numeric characters."
+        help = "Minimum numeric characters. If flag is not set, won't be added to character pool."
     )]
-    min_numeric: usize,
+    min_numeric: Option<Option<usize>>,
 
     #[arg(
         short = 's',
         long = "special",
-        default_value = "0",
-        help = "Minimum special characters."
+        help = "Minimum special characters. If flag is not set, won't be added to character pool."
     )]
-    min_special: usize,
+    min_special: Option<Option<usize>>,
 
     #[arg(
         long = "show",
@@ -66,22 +50,26 @@ struct PwdArgs {
     )]
     copy: bool,
 
-    #[arg(short = 'v', long = "verbose", help = "Prints verbose output.")]
+    #[arg(
+        short = 'v',
+        long = "verbose",
+        help = "Prints information such as time taken to generate password and character pool distribution."
+    )]
     verbose: bool,
 }
 
 #[inline]
-fn emplace(
-    pools: &mut Vec<pwdgen::Pool>,
-    name: Option<&'static str>,
-    minimum: usize,
+fn add_to_pool(
+    pool: &mut Vec<Set>,
+    name: &'static str,
+    min: Option<Option<usize>>,
     char_set: &'static str,
 ) {
-    if minimum > 0 {
-        pools.push(pwdgen::Pool {
+    if min.is_some() {
+        pool.push(Set {
             name,
-            minimum,
-            char_set,
+            minimum: min.unwrap().unwrap_or(0),
+            chars: char_set,
         });
     }
 }
@@ -89,25 +77,19 @@ fn emplace(
 fn main() {
     let args = PwdArgs::parse();
 
-    let mut pools = Vec::new();
+    let mut pool = Vec::new();
+    add_to_pool(&mut pool, "alpha", args.min_alpha, UPPER);
+    add_to_pool(&mut pool, "numeric", args.min_numeric, NUMERIC);
+    add_to_pool(&mut pool, "special", args.min_special, SPECIAL);
 
-    if args.min_alpha > 0 {
-        emplace(&mut pools, Some("alpha"), args.min_alpha, pwdgen::ALPHA);
-    } else {
-        emplace(&mut pools, Some("upper"), args.min_upper, pwdgen::UPPER);
-        emplace(&mut pools, Some("lower"), args.min_lower, pwdgen::LOWER);
-    }
-    emplace(&mut pools, Some("numeric"), args.min_numeric, pwdgen::NUMERIC);
-    emplace(&mut pools, Some("special"), args.min_special, pwdgen::SPECIAL);
-
-    if pools.is_empty() {
-        println!("No character pools specified. Defaulting to alphanumeric characters.");
-        emplace(&mut pools, Some("alpha"), 1, pwdgen::ALPHA);
-        emplace(&mut pools, Some("numeric"), 1, pwdgen::NUMERIC);
+    if pool.is_empty() {
+        println!("No character sets specified to add to pool. Defaulting to alphanumeric.");
+        add_to_pool(&mut pool, "alpha", Some(Some(1)), ALPHA);
+        add_to_pool(&mut pool, "numeric", Some(Some(1)), NUMERIC);
     }
 
     let start = std::time::Instant::now();
-    let pwd = pwdgen::from_pools(&mut rand::thread_rng(), args.length, &pools);
+    let pwd = pwdgen::from_pools(&mut rand::thread_rng(), args.length, &pool).unwrap();
     let elapsed = start.elapsed();
 
     if args.copy {
@@ -135,17 +117,17 @@ fn main() {
         println!("Time to generate: {}", str_time.yellow());
 
         // Percentage of each character pool in final password.
-        let mut percentages = Vec::with_capacity(pools.len());
+        let mut percentages = Vec::with_capacity(pool.len());
 
-        let pool_counts = pools
+        let pool_counts = pool
             .iter()
-            .map(|p| pwd.chars().filter(|c| p.char_set.contains(*c)).count());
+            .map(|p| pwd.chars().filter(|c| p.chars.contains(*c)).count());
 
-        for (pool, count) in pools.iter().zip(pool_counts) {
+        for (pool, count) in pool.iter().zip(pool_counts) {
             let percent = (count as f64 / pwd.len() as f64) * 100.0;
             percentages.push(format!(
                 "{}: {}",
-                pool.name.unwrap_or("???").magenta(),
+                pool.name.magenta(),
                 format!("{:.2}%", percent).bright_magenta()
             ));
         }
