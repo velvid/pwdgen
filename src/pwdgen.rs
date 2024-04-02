@@ -1,6 +1,7 @@
+#![allow(dead_code)]
+
 use rand::seq::{IteratorRandom, SliceRandom};
 
-#[allow(dead_code)]
 pub mod chars {
     pub const UPPER: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     pub const LOWER: &'static str = "abcdefghijklmnopqrstuvwxyz";
@@ -16,7 +17,6 @@ pub mod chars {
     }
 }
 
-#[allow(dead_code)]
 pub fn from_pool<R>(
     rng: &mut R,
     min_length: usize,
@@ -40,7 +40,6 @@ where
 
     let mut pwd: Vec<char> = Vec::with_capacity(length);
 
-    // Add the minimum number of characters from each pool.
     for pool in pools {
         for _ in 0..pool.minimum {
             let c = pool.chars.chars().choose(rng).unwrap();
@@ -48,7 +47,6 @@ where
         }
     }
 
-    // Add the remaining characters.
     let merged_char_set: String = pools.iter().flat_map(|p| p.chars.chars()).collect();
 
     for _ in 0..(length - sum_of_min) {
@@ -61,7 +59,6 @@ where
     return Ok(pwd.into_iter().collect());
 }
 
-#[allow(dead_code)]
 pub fn from_params<R>(
     rng: &mut R,
     min_length: usize,
@@ -72,8 +69,6 @@ pub fn from_params<R>(
 where
     R: rand::Rng + ?Sized,
 {
-    use chars::*;
-
     let sum_of_min = min_alpha.unwrap_or(0) + min_numeric.unwrap_or(0) + min_special.unwrap_or(0);
 
     if sum_of_min == 0 {
@@ -84,32 +79,32 @@ where
     let mut pwd: Vec<char> = Vec::with_capacity(length);
 
     for _ in 0..min_alpha.unwrap_or(0) {
-        let c = ALPHA.chars().choose(rng).unwrap();
+        let c = chars::ALPHA.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
     for _ in 0..min_numeric.unwrap_or(0) {
-        let c = NUMERIC.chars().choose(rng).unwrap();
+        let c = chars::NUMERIC.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
     for _ in 0..min_special.unwrap_or(0) {
-        let c = SPECIAL.chars().choose(rng).unwrap();
+        let c = chars::SPECIAL.chars().choose(rng).unwrap();
         pwd.push(c);
     }
 
     let mut merged_chars = String::with_capacity(chars::ALL.len());
 
     if min_alpha.is_some() {
-        merged_chars.push_str(ALPHA);
+        merged_chars.push_str(chars::ALPHA);
     }
 
     if min_numeric.is_some() {
-        merged_chars.push_str(NUMERIC);
+        merged_chars.push_str(chars::NUMERIC);
     }
 
     if min_special.is_some() {
-        merged_chars.push_str(SPECIAL);
+        merged_chars.push_str(chars::SPECIAL);
     }
 
     for _ in 0..(length - sum_of_min) {
