@@ -78,7 +78,7 @@ fn main() {
     let args = PwdArgs::parse();
 
     let mut pool = Vec::new();
-    add_to_pool(&mut pool, "alpha", args.min_alpha, UPPER);
+    add_to_pool(&mut pool, "alpha", args.min_alpha, ALPHA);
     add_to_pool(&mut pool, "numeric", args.min_numeric, NUMERIC);
     add_to_pool(&mut pool, "special", args.min_special, SPECIAL);
 
